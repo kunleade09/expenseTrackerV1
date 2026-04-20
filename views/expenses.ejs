@@ -1,0 +1,68 @@
+<%- include('partials/header', { page: 'expenses' }) %>
+
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">All Expenses</h1>
+        <p class="page-sub"><%=expenseCount%> transactions recorded</p>
+      </div>
+
+      <!-- Category Filter -->
+      <form action="/expenses" method="GET" class="filter-form">
+        <select name="category" onchange="this.form.submit()">
+          <option value="" <%= selectedCategory === '' ? 'selected' : '' %>>All Categories</option>
+          <option value="Food">🍔 Food</option>
+          <option value="Transport">🚌 Transport</option>
+          <option value="Bills">💡 Bills</option>
+          <option value="Shopping">🛍️ Shopping</option>
+          <option value="Health">💊 Health</option>
+          <option value="Entertainment">🎬 Entertainment</option>
+          <option value="Others">📦 Others</option>
+        </select>
+      </form>
+    </header>
+
+    <section class="card table-card">
+      <div class="table-wrap">
+        <table class="expense-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% expenses.forEach((expense, index) => { %>
+              <tr>
+                <td class="td-index"><%= index + 1 %></td>
+                <td class="td-name"><%= expense.name %></td>
+                <td>
+                  <span class="cat-tag cat-<%= expense.category.toLowerCase() %>">
+                    <%= expense.category %>
+                  </span>
+                </td>
+                <td class="td-date"><%= expense.formattedDate %></td>
+                <td class="td-amount">₦<%= expense.amount.toLocaleString() %></td>
+                <td>
+                  <form action="/expenses/<%= expense.id %>?_method=DELETE" method="POST" style="display:inline">
+                    <button type="submit" class="btn-delete" title="Delete">✕</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="tfoot-label">Total</td>
+              <td class="td-amount tfoot-total">₦<%=totalSpent%></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+<%- include('partials/footer') %>

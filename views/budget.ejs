@@ -1,0 +1,67 @@
+<%- include('partials/header', { page: 'budget' }) %>
+
+    <header class="topbar">
+      <div>
+        <h1 class="page-title">Budget</h1>
+        <p class="page-sub">Manage your monthly spending limit</p>
+      </div>
+    </header>
+
+    <div class="lower-grid" style="align-items: start">
+
+      <!-- UPDATE BUDGET FORM -->
+      <section class="card form-card">
+        <h2 class="card-title">Update Budget</h2>
+        <p class="card-desc">Setting a new budget will keep all existing expenses — only the budget ceiling changes.</p>
+        <form action="/budget" method="POST" class="expense-form">
+          <div class="form-group">
+            <label for="amount">New Budget Amount (₦)</label>
+            <input
+              type="number"
+              id="amount"
+              name="amount"
+              placeholder="e.g. 150000"
+              value="150000"
+              min="1"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-submit">Update Budget</button>
+        </form>
+      </section>
+
+      <!-- BUDGET SUMMARY -->
+      <section class="card">
+        <h2 class="card-title">Current Overview</h2>
+
+        <div class="budget-overview">
+          <div class="overview-item">
+            <p class="ov-label">Monthly Budget</p>
+            <p class="ov-value">₦150,000</p>
+          </div>
+          <div class="overview-divider"></div>
+          <div class="overview-item">
+            <p class="ov-label">Total Spent</p>
+            <p class="ov-value ov-spent">₦87,500</p>
+          </div>
+          <div class="overview-divider"></div>
+          <div class="overview-item">
+            <p class="ov-label">Remaining</p>
+            <p class="ov-value ov-safe">₦62,500</p>
+          </div>
+        </div>
+
+        <div class="progress-header" style="margin-top: 1.5rem">
+          <span>Spent so far</span>
+          <span class="progress-pct">58%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: 58%"></div>
+        </div>
+
+        <div class="alert alert-ok">✓ You're on track this month.</div>
+      </section>
+
+    </div>
+
+<%- include('partials/footer') %>

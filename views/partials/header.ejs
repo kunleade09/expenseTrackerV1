@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('head') %>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">Spendwise</span>
+    </div>
+
+    <nav class="nav">
+      <a href="/" class="nav-item <%= page === 'dashboard' ? 'active' : '' %>">
+        <span class="nav-icon">⬡</span> Dashboard
+      </a>
+      <a href="/expenses" class="nav-item <%= page === 'expenses' ? 'active' : '' %>">
+        <span class="nav-icon">⬡</span> Expenses
+      </a>
+      <a href="/budget" class="nav-item <%= page === 'budget' ? 'active' : '' %>">
+        <span class="nav-icon">⬡</span> Budget
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <p class="month-label">Period</p>
+      <p class="month-value">April 2026</p>
+    </div>
+  </aside>
+
+  <!-- ── PAGE WRAPPER ─────────────────────────────────────── -->
+  <main class="main">
