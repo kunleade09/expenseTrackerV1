@@ -1,85 +1,115 @@
 const express = require('express');
 const router = express.Router();
+const Budget = require('../models/budget');
+const Expense = require('../models/expense');
 const { v4: uuidv4 } = require('uuid');
-const { writeDB, getCurrentMonth, getTotalSpent, getRemaining, getSpentPercent, 
-    getCategoryBreakdown, getExpenseCount, formatExpense, getProgressClass} = require('../helpers');
+const {  getMonthKey, getSpentPercent, getCategoryBreakdown, formatExpense, getProgressClass} = require('../helpers');
 
-router.get('/', (req, res) => {
-    const {month} = getCurrentMonth();
-    const totalMoneySpent = getTotalSpent(month.expenses);
-    const remaining = getRemaining(month.budget, totalMoneySpent);
-    const spentPercent = getSpentPercent(month.budget, totalMoneySpent);
-    const categoryBreakdown = getCategoryBreakdown(month.expenses, totalMoneySpent);
+router.get('/', async (req, res) => {
+    const monthKey = getMonthKey();
 
-    const recentExpenses = [...month.expenses]
-        .reverse()
-        .slice(0, 5)
-        .map(exp => ({
-        ...exp,
-        formattedDate: new Date(exp.date + 'T00:00:00')
-        .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    }));
+    const budgetDoc = await Budget.findOne({monthKey});
+    const budget = budgetDoc ? budgetDoc.amount : 0;
 
-    res.render('index', {budget: month.budget, totalMoneySpent, remaining, spentPercent, recentExpenses, 
-        categoryBreakdown, expenseCount:getExpenseCount(month.expenses),
-        progressClass:getProgressClass(spentPercent)});
+    const expenses = await Expense.find({monthKey}).sort({createdAt: -1});
+
+    const totalMoneySpent = expenses.reduce((s, e) => s + e.amount, 0);
+    const remaining = budget - totalMoneySpent;
+    const spentPercent = getSpentPercent(budget, totalMoneySpent);
+    const categoryBreakdown = getCategoryBreakdown(expenses, totalMoneySpent);
+
+    const recentExpenses = expenses.slice(0, 5).map(formatExpense);
+
+
+    res.render('index', {budget, totalMoneySpent, remaining, spentPercent, recentExpenses, 
+        categoryBreakdown, expenseCount: expenses.length, progressClass:getProgressClass(spentPercent), currentMonth: new Date().toLocaleString('default', { month: 'long', year: 'numeric' })});
 });
 
-router.post("/", (req, res) => {
-    const { db, key } = getCurrentMonth();
-    db.months[key].budget = Number(req.body.budgetAmount);
-    writeDB(db);
-    res.redirect('/');
+router.post("/", async (req, res) => {
+    try {
+        const monthKey = getMonthKey();
+        await Budget.findOneAndUpdate(
+            { monthKey },
+            { amount: Number(req.body.amount) },
+            { upsert: true, returnDocument: 'after' }
+        );
+        res.redirect('/');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Something went wrong');
+    }
 })
 
 router.get("/budget", (req, res) => { 
     res.render("budget")
 })
 
-router.post("/budget", (req, res) => {
-    const { db, key} = getCurrentMonth();
-    db.months[key].budget = Number(req.body.amount);
-    writeDB(db);
-    res.render("budget")
-})
-
-router.get("/expenses", (req, res) => {
-    const { month } = getCurrentMonth();
-    const { category } = req.query;  
-
-    let expenses = [...month.expenses].reverse();
-
-    if (category) {
-        expenses = expenses.filter(e => e.category === category);
+router.post("/budget", async (req, res) => {
+    try {
+        const monthKey = getMonthKey();
+        
+        await Budget.findOneAndUpdate(
+            { monthKey },
+            { amount: Number(req.body.amount) },
+            { upsert: true, new: true }
+        );
+        res.redirect('/budget');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Something went wrong');
     }
-    const totalSpent = month.expenses.reduce((s, e) => s + e.amount, 0);
-    res.render('expenses', {expenses: expenses.map(formatExpense), expenseCount:getExpenseCount(month.expenses),
-        totalSpent, selectedCategory: category || '',
-        currentMonth:new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-  });
 })
 
-router.post('/expenses', (req, res) => {
-    const { db, key } = getCurrentMonth();
-    const newExpense  = {
-        id: uuidv4(),
+router.get("/expenses", async (req, res) => {
+    try {
+        const monthKey = getMonthKey();
+        const { category } = req.query;
+
+        const query = { monthKey };
+        if (category) {
+            query.category = category;
+        }
+
+        const expenses   = await Expense.find(query).sort({ createdAt: -1 });
+        const allExpenses = await Expense.find({ monthKey });
+        const totalSpent = allExpenses.reduce((s, e) => s + e.amount, 0);
+        res.render('expenses', {expenses: expenses.map(formatExpense), expenseCount:allExpenses.length,
+            totalSpent, selectedCategory: category || '',
+            currentMonth:new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+            });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Something went wrong');
+    }
+})
+
+router.post('/expenses', async (req, res) => {
+   try {
+        await Expense.create({
+        monthKey: getMonthKey(),
         name: req.body.name,
         amount: Number(req.body.amount),
         category: req.body.category,
         date: req.body.date
-    };
-
-    db.months[key].expenses.push(newExpense);
-    writeDB(db);
+    });
     res.redirect('/');
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Something went wrong');
+    }
 });
 
-router.delete("/expenses/:id", (req, res) => {
-    const { db, key } = getCurrentMonth();
-    db.months[key].expenses = db.months[key].expenses
-        .filter(e => e.id !== req.params.id);
-    writeDB(db);
-    res.redirect('/');
+router.delete("/expenses/:id", async (req, res) => {
+    try {
+        await Expense.findByIdAndDelete(req.params.id);
+        res.redirect('back');
+
+    } catch (err) {
+    console.error(err);
+    res.status(500).send('Something went wrong');
+  }
 })
 
 module.exports = router;
